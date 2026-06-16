@@ -1,7 +1,11 @@
 // src/app/services/api.ts
 
+// Tambahkan BASE_URL ini di bagian paling atas
+const BASE_URL = "https://raigandhi-pbl-lentera-laut.hf.space";
+
 export async function fetchPrediction(locationName: string) {
-  const url = `http://127.0.0.1:8000/predict?location=${locationName}`;
+  // Ganti http://127.0.0.1:8000 dengan BASE_URL
+  const url = `${BASE_URL}/predict?location=${locationName}`;
   
   try {
     const response = await fetch(url, {
@@ -23,10 +27,9 @@ export async function fetchPrediction(locationName: string) {
   }
 }
 
-// Tambahkan di dalam src/app/services/api.ts
-
 export async function fetchLocations() {
-  const url = `http://127.0.0.1:8000/locations`;
+  // Ganti http://127.0.0.1:8000 dengan BASE_URL
+  const url = `${BASE_URL}/locations`;
   
   try {
     const response = await fetch(url, {
@@ -48,11 +51,9 @@ export async function fetchLocations() {
   }
 }
 
-// Tambahkan fungsi ini di bawah fetchLocations
-
 export async function fetchHistory(locationName: string, limit: number = 5) {
-  // Menggunakan endpoint /marine-weather sesuai dengan Swagger UI kamu
-  const url = `http://127.0.0.1:8000/marine-weather?location=${locationName}&limit=${limit}`;
+  // Ganti http://127.0.0.1:8000 dengan BASE_URL
+  const url = `${BASE_URL}/marine-weather?location=${locationName}&limit=${limit}`;
   
   try {
     const response = await fetch(url, {
