@@ -13,11 +13,19 @@ const defaultData = [
   { hari: 'Sen 14:00', tinggiGelombang: 0.22, kecepatanAngin: 2.1, suhuLaut: 31.0 },
 ];
 
-export default function WeatherChart({ marineData = [], waktuSaatIni = 'Sen 13:00' }: WeatherChartProps) {
+export default function WeatherChart({ marineData = [], waktuSaatIni }: WeatherChartProps) {
   
   const formattedChartData = marineData.length > 0 
     ? marineData.map((item) => {
-        const dateObj = new Date(item.time || item.time_prediction);
+        // Ambil string waktu dari database
+        let timeString = item.time || item.time_prediction;
+        
+        // Tambahkan 'Z' agar dibaca sebagai UTC, lalu biarkan browser mengubahnya ke waktu lokal (WIB)
+        if (typeof timeString === 'string' && !timeString.endsWith('Z')) {
+            timeString += 'Z';
+        }
+
+        const dateObj = new Date(timeString);
         const namaHari = dateObj.toLocaleDateString('id-ID', { weekday: 'short' });
         const jam = dateObj.getHours().toString().padStart(2, '0') + ':00';
 
@@ -29,6 +37,14 @@ export default function WeatherChart({ marineData = [], waktuSaatIni = 'Sen 13:0
         };
       })
     : defaultData; 
+
+  // Men-generate 'waktuSaatIni' secara otomatis jika tidak dilempar dari komponen induk
+  const currentLocalTime = waktuSaatIni || (() => {
+    const now = new Date();
+    const namaHariSekarang = now.toLocaleDateString('id-ID', { weekday: 'short' });
+    const jamSekarang = now.getHours().toString().padStart(2, '0') + ':00';
+    return `${namaHariSekarang} ${jamSekarang}`;
+  })();
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
@@ -56,9 +72,9 @@ export default function WeatherChart({ marineData = [], waktuSaatIni = 'Sen 13:0
           />
           <Legend wrapperStyle={{ fontSize: '13px', fontWeight: 500 }} iconType="line" />
           
-          {waktuSaatIni && (
+          {currentLocalTime && (
             <ReferenceLine 
-              x={waktuSaatIni} 
+              x={currentLocalTime} 
               stroke="#EF4444" 
               strokeDasharray="5 5" 
               label={{ 
