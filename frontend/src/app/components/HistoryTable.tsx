@@ -34,7 +34,7 @@ export default function HistoryTable({ historyData = [], locationName }: History
       {/* Header Tabel */}
       <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Tabel Riwayat Observasi</h2>
+          <h2 className="text-xl font-bold text-gray-900">Tabel Riwayat Cuaca</h2>
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
             <MapPin className="w-4 h-4 text-[#088395]" />
             <span>Lokasi: <strong className="text-gray-700">{locationName || 'Belum dipilih'}</strong></span>
@@ -59,7 +59,14 @@ export default function HistoryTable({ historyData = [], locationName }: History
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm">
             {sortedData.map((row, index) => {
-              const dateObj = new Date(row.time);
+              
+              // Menerapkan trik 'Z' agar jam sinkron dengan Waktu Lokal (WIB)
+              let timeString = row.time;
+              if (typeof timeString === 'string' && !timeString.endsWith('Z')) {
+                timeString += 'Z';
+              }
+
+              const dateObj = new Date(timeString);
               const formatWaktu = dateObj.toLocaleDateString('id-ID', { 
                 weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' 
               }) + ' - ' + dateObj.getHours().toString().padStart(2, '0') + ':00 WIB';
