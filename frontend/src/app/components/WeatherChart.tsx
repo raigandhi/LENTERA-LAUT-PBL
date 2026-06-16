@@ -2,7 +2,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 
 interface WeatherChartProps {
   marineData?: any[]; 
-  waktuSaatIni?: string; 
+  waktuSaatIni?: string; // Tetap dipertahankan di interface agar tidak error jika Parent mengirimkannya
 }
 
 const defaultData = [
@@ -13,12 +13,14 @@ const defaultData = [
   { hari: 'Sen 14:00', tinggiGelombang: 0.22, kecepatanAngin: 2.1, suhuLaut: 31.0 },
 ];
 
-export default function WeatherChart({ marineData = [], waktuSaatIni }: WeatherChartProps) {
+export default function WeatherChart({ marineData = [] }: WeatherChartProps) {
   
   const formattedChartData = marineData.length > 0 
     ? marineData.map((item) => {
-        let timeString = item.time || item.time_prediction;
+        // 1. Ambil string waktu dari database (mengakomodasi berbagai kemungkinan nama field)
+        let timeString = item.time || item.time_prediction || item.prediction_time;
         
+        // 2. Tambahkan 'Z' agar dibaca sebagai UTC, lalu biarkan browser mengubahnya ke WIB
         if (typeof timeString === 'string' && !timeString.endsWith('Z')) {
             timeString += 'Z';
         }
@@ -27,28 +29,35 @@ export default function WeatherChart({ marineData = [], waktuSaatIni }: WeatherC
         const namaHari = dateObj.toLocaleDateString('id-ID', { weekday: 'short' });
         const jam = dateObj.getHours().toString().padStart(2, '0') + ':00';
 
+        // 3. Deteksi apakah ini data prediksi (mengecek nama field dari backend)
+        const isPrediction = Object.keys(item).some(key => key.includes('pred'));
+
         return {
           hari: `${namaHari} ${jam}`,
-          isPrediction: !!item.time_prediction, // Tandai jika ini adalah data prediksi
-          tinggiGelombang: item.wave_height?.value || item.wave_height || 0,
-          kecepatanAngin: item.wind_speed_10m?.value || item.wind_speed_10m || 0, 
-          suhuLaut: item.sea_surface_temperature?.value || item.sea_surface_temperature || 0,
+          isPrediction: isPrediction,
+          // Gunakan nilai prediksi jika ada, jika tidak gunakan nilai observasi
+          tinggiGelombang: item.wave_height_pred ?? item.wave_height?.value ?? item.wave_height ?? 0,
+          kecepatanAngin: item.wind_speed_pred ?? item.wind_speed_10m?.value ?? item.wind_speed_10m ?? 0, 
+          suhuLaut: item.sea_surface_temperature_pred ?? item.sea_surface_temperature?.value ?? item.sea_surface_temperature ?? 0,
         };
       })
     : defaultData; 
 
-  // LOGIKA BARU: Menentukan posisi garis merah secara dinamis dari dalam data
-  let referencePosition = waktuSaatIni;
+  // 4. Menentukan posisi garis merah secara dinamis dari dalam data
+  let referencePosition = "";
 
-  if (!waktuSaatIni && formattedChartData.length > 1) {
-    // Cari urutan ke berapa data prediksi itu berada
+  if (formattedChartData.length > 1) {
+    // Cari urutan ke berapa data prediksi itu dimulai
     const predIndex = formattedChartData.findIndex(item => item.isPrediction);
     
     if (predIndex > 0) {
-      // Jika ketemu data prediksi, letakkan garis tepat di 1 jam sebelumnya (data riwayat terakhir)
+      // Jika ketemu data prediksi, letakkan garis tepat di 1 jam sebelumnya (data observasi terakhir)
       referencePosition = formattedChartData[predIndex - 1].hari;
+    } else if (predIndex === -1 && marineData.length > 0) {
+      // Jika tidak ada data prediksi sama sekali di array, tidak usah beri garis
+      referencePosition = "";
     } else {
-      // Jika tidak ada penanda khusus, asumsikan titik terakhir di grafik adalah hasil prediksi
+      // Fallback cadangan
       referencePosition = formattedChartData[formattedChartData.length - 2].hari;
     }
   }
