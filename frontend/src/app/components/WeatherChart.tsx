@@ -17,10 +17,8 @@ export default function WeatherChart({ marineData = [], waktuSaatIni }: WeatherC
   
   const formattedChartData = marineData.length > 0 
     ? marineData.map((item) => {
-        // Ambil string waktu dari database
         let timeString = item.time || item.time_prediction;
         
-        // Tambahkan 'Z' agar dibaca sebagai UTC, lalu biarkan browser mengubahnya ke waktu lokal (WIB)
         if (typeof timeString === 'string' && !timeString.endsWith('Z')) {
             timeString += 'Z';
         }
@@ -31,6 +29,7 @@ export default function WeatherChart({ marineData = [], waktuSaatIni }: WeatherC
 
         return {
           hari: `${namaHari} ${jam}`,
+          isPrediction: !!item.time_prediction, // Tandai jika ini adalah data prediksi
           tinggiGelombang: item.wave_height?.value || item.wave_height || 0,
           kecepatanAngin: item.wind_speed_10m?.value || item.wind_speed_10m || 0, 
           suhuLaut: item.sea_surface_temperature?.value || item.sea_surface_temperature || 0,
@@ -38,13 +37,21 @@ export default function WeatherChart({ marineData = [], waktuSaatIni }: WeatherC
       })
     : defaultData; 
 
-  // Men-generate 'waktuSaatIni' secara otomatis jika tidak dilempar dari komponen induk
-  const currentLocalTime = waktuSaatIni || (() => {
-    const now = new Date();
-    const namaHariSekarang = now.toLocaleDateString('id-ID', { weekday: 'short' });
-    const jamSekarang = now.getHours().toString().padStart(2, '0') + ':00';
-    return `${namaHariSekarang} ${jamSekarang}`;
-  })();
+  // LOGIKA BARU: Menentukan posisi garis merah secara dinamis dari dalam data
+  let referencePosition = waktuSaatIni;
+
+  if (!waktuSaatIni && formattedChartData.length > 1) {
+    // Cari urutan ke berapa data prediksi itu berada
+    const predIndex = formattedChartData.findIndex(item => item.isPrediction);
+    
+    if (predIndex > 0) {
+      // Jika ketemu data prediksi, letakkan garis tepat di 1 jam sebelumnya (data riwayat terakhir)
+      referencePosition = formattedChartData[predIndex - 1].hari;
+    } else {
+      // Jika tidak ada penanda khusus, asumsikan titik terakhir di grafik adalah hasil prediksi
+      referencePosition = formattedChartData[formattedChartData.length - 2].hari;
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
@@ -72,14 +79,14 @@ export default function WeatherChart({ marineData = [], waktuSaatIni }: WeatherC
           />
           <Legend wrapperStyle={{ fontSize: '13px', fontWeight: 500 }} iconType="line" />
           
-          {currentLocalTime && (
+          {referencePosition && (
             <ReferenceLine 
-              x={currentLocalTime} 
+              x={referencePosition} 
               stroke="#EF4444" 
               strokeDasharray="5 5" 
               label={{ 
                 position: 'top', 
-                value: 'Jam Saat Ini', 
+                value: 'Batas Prediksi', 
                 fill: '#EF4444', 
                 fontSize: 12,
                 fontWeight: 'bold'
